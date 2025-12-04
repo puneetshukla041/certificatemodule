@@ -57,7 +57,7 @@ export const getCertificateColumnConfig = () => {
     ];
 };
 
-// Helper for sorting (UNCHANGED)
+// Helper for sorting (FIXED FOR BUILD ERROR)
 export const sortCertificates = (
     certificates: ICertificateClient[],
     sortConfig: SortConfig | null
@@ -67,6 +67,13 @@ export const sortCertificates = (
         sortableItems.sort((a, b) => {
             const aValue = a[sortConfig.key];
             const bValue = b[sortConfig.key];
+
+            // 🛡️ Fix: Handle undefined/null values explicitly for TypeScript safety
+            if (aValue === bValue) return 0;
+            
+            // If one value is missing, push it to the end
+            if (aValue === undefined || aValue === null) return 1;
+            if (bValue === undefined || bValue === null) return -1;
 
             if (aValue < bValue) {
                 return sortConfig.direction === 'asc' ? -1 : 1;
