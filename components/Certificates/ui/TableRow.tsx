@@ -16,7 +16,10 @@ import {
     Shield,
     Award,
     Star,
-    Layout
+    Layout,
+    Lock,
+    Unlock,
+    AlertCircle
 } from 'lucide-react';
 import { ICertificateClient, PAGE_LIMIT, CERTIFICATE_TEMPLATES, CERTIFICATE_TYPES } from '../utils/constants';
 import { getHospitalColor, doiToDateInput, dateInputToDoi } from '../utils/helpers';
@@ -69,6 +72,9 @@ const SmartActionMenu = ({
     const [template, setTemplate] = useState<string>('');
     const menuRef = useRef<HTMLDivElement>(null);
 
+    // 💡 CHECK APPROVAL STATUS
+    const isApproved = cert.isApproved === true;
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -107,15 +113,6 @@ const SmartActionMenu = ({
         }
     };
 
-    const getThemeColor = () => {
-        if (certType === 'internal') {
-            if (template === 'eom') return 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200';
-            return 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-200';
-        }
-        if (template === 'training') return 'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-200';
-        return 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200';
-    };
-
     return (
         <div className="relative w-full md:w-auto" ref={menuRef}>
             <button
@@ -123,15 +120,23 @@ const SmartActionMenu = ({
                 disabled={isDisabled}
                 className={clsx(
                     "flex items-center justify-between md:justify-center gap-2 px-3 py-2 md:py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border shadow-sm select-none w-full md:w-auto",
-                    isOpen
-                        ? "bg-slate-800 text-white border-slate-800"
-                        : "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600",
+                    isOpen 
+                        ? "bg-slate-800 text-white border-slate-800" 
+                        : isApproved
+                            ? "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600"
+                            : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100", // 💡 Locked Style
                     isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"
                 )}
             >
                 <div className="flex items-center gap-2">
-                    {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Layout className="w-3.5 h-3.5" />}
-                    <span>Actions</span>
+                    {isLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isApproved ? (
+                        <Layout className="w-3.5 h-3.5" />
+                    ) : (
+                        <Lock className="w-3.5 h-3.5" /> // 💡 Lock Icon
+                    )}
+                    <span>{isApproved ? "Actions" : "Restricted"}</span>
                 </div>
                 <ChevronDown className={clsx("w-3 h-3 transition-transform duration-200", isOpen && "rotate-180")} />
             </button>
@@ -143,12 +148,23 @@ const SmartActionMenu = ({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.15 }}
-                        // Changed positioning for better mobile handling: 
-                        // On mobile (default), it aligns left. On md, it aligns right.
-                        // Added z-index to ensure it floats above other rows.
                         className="absolute left-0 md:left-auto md:right-0 bottom-full md:bottom-auto md:top-full mb-2 md:mt-2 w-64 p-4 bg-white rounded-xl shadow-xl border border-slate-100 z-[100] origin-bottom-left md:origin-top-right ring-1 ring-slate-900/5"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        {/* 💡 STATUS HEADER */}
+                        <div className="mb-4 pb-3 border-b border-slate-100 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Status</span>
+                            {isApproved ? (
+                                <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">
+                                    <Unlock className="w-3 h-3" /> Unlocked
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100">
+                                    <Lock className="w-3 h-3" /> Locked
+                                </span>
+                            )}
+                        </div>
+
                         <div className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">
@@ -213,27 +229,33 @@ const SmartActionMenu = ({
                                         initial={{ opacity: 0, y: 5 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 5 }}
-                                        className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100"
+                                        className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100"
                                     >
+                                        {/* 💡 DYNAMIC BUTTONS BASED ON STATUS */}
                                         <button
                                             onClick={handleDownload}
                                             className={clsx(
-                                                "flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer active:scale-95",
-                                                getThemeColor()
+                                                "flex flex-col items-center justify-center gap-1.5 px-3 py-3 rounded-xl text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer active:scale-95 border",
+                                                isApproved 
+                                                    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:shadow-blue-200" 
+                                                    : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
                                             )}
                                         >
-                                            <Download className="w-3.5 h-3.5" />
-                                            Download
+                                            {isApproved ? <Download className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                                            <span>{isApproved ? "Download" : "Request"}</span>
                                         </button>
+
                                         <button
                                             onClick={handleMail}
                                             className={clsx(
-                                                "flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer active:scale-95",
-                                                getThemeColor()
+                                                "flex flex-col items-center justify-center gap-1.5 px-3 py-3 rounded-xl text-xs font-semibold shadow-sm transition-all duration-200 cursor-pointer active:scale-95 border",
+                                                isApproved 
+                                                    ? "bg-teal-600 text-white border-teal-600 hover:bg-teal-700 hover:shadow-teal-200" 
+                                                    : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
                                             )}
                                         >
-                                            <Mail className="w-3.5 h-3.5" />
-                                            Mail
+                                            {isApproved ? <Mail className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                                            <span>{isApproved ? "Email" : "Request"}</span>
                                         </button>
                                     </motion.div>
                                 )}
@@ -273,7 +295,6 @@ const TableRow: React.FC<TableRowProps> = ({
     const isPdfGenerating = generatingPdfId === cert._id || generatingPdfV1Id === cert._id;
     const isDisabled = isPdfGenerating || isAnyActionLoading || (isEditing && !editFormData);
 
-    // Common mobile label style
     const MobileLabel = ({ children }: { children: React.ReactNode }) => (
         <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2 min-w-[80px]">
             {children}
@@ -283,16 +304,13 @@ const TableRow: React.FC<TableRowProps> = ({
     return (
         <tr
             className={clsx(
-                // Base & Mobile: Card Layout
                 "block md:table-row mb-4 md:mb-0 bg-white md:bg-transparent rounded-xl md:rounded-none shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] md:shadow-none border border-slate-200 md:border-0 md:border-b md:border-slate-100",
-                // States
                 isSelected ? "md:bg-indigo-50/60 ring-1 ring-indigo-500 md:ring-0" : "hover:bg-slate-50",
                 isDeleting && "opacity-0 -translate-x-4 pointer-events-none transition-all duration-300",
                 isEditing && "bg-amber-50/50"
             )}
             style={isFlashing ? { backgroundColor: 'rgba(240, 253, 244, 1)', transition: 'background-color 0.5s ease' } : {}}
         >
-            {/* CHECKBOX */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Select</MobileLabel>
                 <div className="flex items-center justify-center md:justify-center w-full md:w-auto">
@@ -315,16 +333,12 @@ const TableRow: React.FC<TableRowProps> = ({
                 </div>
             </td>
 
-            {/* SERIAL NUMBER - Hidden on Mobile */}
             <td className="hidden md:table-cell px-4 py-4 text-center">
                 <span className="text-xs font-medium text-slate-400 font-mono">
                     {String(serialNumber).padStart(2, '0')}
                 </span>
             </td>
 
-            {/* DATA COLUMNS */}
-
-            {/* Certificate No */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Cert No.</MobileLabel>
                 <div className="w-full md:w-auto text-right md:text-left">
@@ -349,7 +363,6 @@ const TableRow: React.FC<TableRowProps> = ({
                 </div>
             </td>
 
-            {/* Name */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Name</MobileLabel>
                 <div className="w-full md:w-auto text-right md:text-left">
@@ -374,7 +387,6 @@ const TableRow: React.FC<TableRowProps> = ({
                 </div>
             </td>
 
-            {/* Hospital */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Hospital</MobileLabel>
                 <div className="w-full md:w-auto text-right md:text-left">
@@ -398,7 +410,6 @@ const TableRow: React.FC<TableRowProps> = ({
                 </div>
             </td>
 
-            {/* Date of Issue */}
             <td className="flex md:table-cell items-center justify-between p-3 md:px-4 md:py-4 border-b border-slate-100 md:border-0">
                 <MobileLabel>Date</MobileLabel>
                 <div className="w-full md:w-auto text-right md:text-left">
@@ -420,11 +431,7 @@ const TableRow: React.FC<TableRowProps> = ({
                 </div>
             </td>
 
-            {/* ACTION BUTTONS */}
             <td className="block md:table-cell p-3 md:px-4 md:py-4 bg-slate-50 md:bg-transparent rounded-b-xl md:rounded-none border-t border-slate-200 md:border-0">
-                {/* MOBILE: CSS GRID for better button spacing 
-                    [   Smart Menu (Flexible)   ] [ Edit ] [ Delete ]
-                */}
                 <div className="w-full md:w-auto relative">
                     {isEditing ? (
                         <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200 w-full justify-end">
@@ -445,8 +452,6 @@ const TableRow: React.FC<TableRowProps> = ({
                         </div>
                     ) : (
                         <div className="grid grid-cols-[1fr_auto_auto] md:flex items-center justify-end gap-2 md:gap-2">
-
-                            {/* Column 1: Smart Action Menu (Takes available width on mobile) */}
                             <SmartActionMenu
                                 cert={cert}
                                 isDisabled={isDisabled}
@@ -457,10 +462,8 @@ const TableRow: React.FC<TableRowProps> = ({
                                 onMailV2={() => handleMailCertificate(cert, 'certificate2.pdf')}
                             />
 
-                            {/* Divider only on Desktop */}
                             <div className="hidden md:block w-px h-5 bg-slate-200 mx-1" />
 
-                            {/* Column 2: Edit Button */}
                             <button
                                 onClick={() => handleEdit(cert)}
                                 disabled={isDisabled}
@@ -475,7 +478,6 @@ const TableRow: React.FC<TableRowProps> = ({
                                 <Edit3 className="w-4 h-4" />
                             </button>
 
-                            {/* Column 3: Delete Button */}
                             <button
                                 onClick={() => handleDelete(cert._id)}
                                 disabled={isDisabled}

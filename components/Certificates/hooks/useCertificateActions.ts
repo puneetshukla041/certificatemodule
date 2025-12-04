@@ -104,7 +104,7 @@ export const useCertificateActions = ({
     const handleRestrictedAdminNotify = async (cert: ICertificateClient, actionType: string) => {
         showNotification(`🔒 This action is locked. Sending approval request...`, 'info');
         
-        const adminEmail = 'puneet.shukla@ssinnovations.org';
+        const adminEmail = 'rama.krishna@ssinnovations.org';
         const mailSubject = `User Request: ${actionType} - ${cert.certificateNo}`;
         const mailContent = `
 Request Type: ${actionType}
